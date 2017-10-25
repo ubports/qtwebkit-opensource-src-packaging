@@ -1,4 +1,4 @@
-qtwebkit-opensource-src (5.9.1+dfsg-5ubuntu1) artful; urgency=medium
+qtwebkit-opensource-src (5.9.1+dfsg+ubports) xenial; urgency=medium
 
   * Update debian/libqt5webkit5.symbols from armhf build log.
 
