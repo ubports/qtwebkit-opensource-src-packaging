@@ -1,8 +1,99 @@
-qtwebkit-opensource-src (5.9.1+dfsg+ubports) xenial; urgency=medium
+qtwebkit-opensource-src (5.212.0~alpha2-7ubports1) xenial; urgency=medium
 
-  * Update debian/libqt5webkit5.symbols from armhf build log.
+  * Build for xenial 
 
- -- Dmitry Shachnev <mitya57@ubuntu.com>  Mon, 25 Sep 2017 16:26:00 +0300
+ -- Marius <mariogrip@ubuntu.com>  Fri, 23 Feb 2018 02:29:43 +0100
+
+qtwebkit-opensource-src (5.212.0~alpha2-7) unstable; urgency=medium
+
+  * Build with -O1 instead of -O2 on sh3/sh4 (closes: #887462).
+  * Update symbols files with buildds’ and sh4 logs (closes: #887463).
+  * Fix the rules syntax to make sure we build with -g1 on mips/mipsel.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Thu, 18 Jan 2018 11:33:51 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-6) unstable; urgency=medium
+
+  [ Dmitry Shachnev ]
+  * Fix build on x32 architecture (closes: #881055):
+    - Make sure JIT is not enabled on x32.
+    - Backport upstream patch to use JSVALUE32_64 on x32.
+    - Use gold linker on x32, to avoid undefined reference error.
+  * Backport upstream changes to fix build on Alpha (closes: #880640).
+  * Backport upstream changes to add descriptions to pkg-config files
+    (closes: #884035).
+  * Bump Standards-Version to 4.1.3, no changes needed.
+
+  [ Pino Toscano ]
+  * Fix build on hurd-i386:
+    - workaround a PATH_MAX usage; patch path_max.diff
+    - update symbols file
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Tue, 09 Jan 2018 18:38:23 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-5) unstable; urgency=medium
+
+  * Add a patch from Fedora to fix nullptr dereference in selectedHtml()
+    (fix_selectedHtml_segfault.diff, closes: #880064).
+  * Update the symbols file from buildds’ logs.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Mon, 30 Oct 2017 20:08:25 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-4) unstable; urgency=medium
+
+  * Fix qtbase build-dependencies after wrong bump.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Fri, 27 Oct 2017 09:55:23 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-3) unstable; urgency=medium
+
+  * Update symbols files from buildds’ logs.
+  * Backport upstream patch to fix WTF::StringImpl::copyChars segfault
+    (closes: #876999).
+  * Bump Standards-Version to 4.1.1, no changes needed.
+  * Update Homepage to point to GitHub.
+  * Bump Qt build-dependencies to 5.9.2.
+  * Upload to unstable.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Fri, 27 Oct 2017 00:26:10 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-2) experimental; urgency=medium
+
+  * Add -DNDEBUG to CPPFLAGS to disable debug output.
+  * Use -g1 on less powerful architectures instead of no debug at all.
+  * Disable JIT on sh4, it is broken and support was removed upstream.
+  * Backport upstream patch to add libatomic detection, fixes armel build.
+  * Build with -mfp32 on mips/mipsel, as LLInt uses odd float registers.
+  * Update symbols files from buildds’ and local build logs.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Sat, 16 Sep 2017 22:32:50 +0300
+
+qtwebkit-opensource-src (5.212.0~alpha2-1) experimental; urgency=medium
+
+  * New upstream alpha release (closes: #862452).
+  * Update debian/watch to track release tarballs on GitHub.
+  * Stop repacking the upstream tarball. Two of three previously excluded
+    files no longer exist, and the third one has changed license to Expat.
+  * Drop all patches, they no longer apply to the new codebase.
+  * Add build-dependencies: cmake, libhyphen-dev, libqt5sensors5-dev,
+    libqt5webchannel5-dev and qtpositioning5-dev.
+  * Drop unused build-dependency: libleveldb-dev.
+  * Migrate to automatic dbgsym packages.
+  * Update install files for the new release.
+  * Update debian/rules to use CMake build system with ninja backend.
+  * Update to debhelper compat level 10.
+  * Rewrite debian/copyright. The new file is based on decopy output, with
+    lots of manual fixes.
+  * Drop unused Lintian overrides.
+  * Add a patch to hide WebCore and JSCore symbols from libQt5WebKit.so.5.
+  * Update libqt5webkit5.symbols from the current ppc64el build log.
+  * Add a patch to properly detect whether OpenGL ES 2 should be used.
+  * Disable the use of gold linker (causes problems at least on i386).
+  * Remove i386 from gstabs_architectures, add ppc64el.
+  * Run upstream tests during build.
+  * Bump Standards-Version to 4.1.0, remove Priority: extra lines.
+
+ -- Dmitry Shachnev <mitya57@debian.org>  Mon, 28 Aug 2017 15:02:13 +0300
 
 qtwebkit-opensource-src (5.9.1+dfsg-5) unstable; urgency=medium
 

@@ -3,86 +3,80 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-export CFLAGS := $(shell dpkg-buildflags --get CFLAGS) $(shell dpkg-buildflags --get CPPFLAGS)
-export CXXFLAGS := $(shell dpkg-buildflags --get CXXFLAGS) $(shell dpkg-buildflags --get CPPFLAGS)
-export LDFLAGS := $(shell dpkg-buildflags --get LDFLAGS) -Wl,--as-needed
-export QT_SELECT := qt5
+include /usr/share/dpkg/architecture.mk
 
-DEB_HOST_ARCH ?= $(shell dpkg-architecture -qDEB_HOST_ARCH)
-DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+export DEB_CPPFLAGS_MAINT_APPEND = -DNDEBUG
 
-gstab_architectures := amd64 i386 powerpc s390x
-fulldebug_architectures := none
-disabled_jit_architectures := armel mips mipsel
-disabled_pch_architectures := amd64 powerpc s390x
+# The debug packages produced by webkit are huge and cause problems in
+# most buildds, so use -g1 in all architectures except the ones that
+# are known to work fine
+ifeq (,$(filter $(DEB_HOST_ARCH_CPU),ppc64 ppc64el s390x))
+	export DEB_CXXFLAGS_MAINT_STRIP = -g
+	export DEB_CXXFLAGS_MAINT_APPEND = -g1
+endif
+
+# See https://github.com/annulen/webkit/issues/626
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU),mips mipsel))
+	export DEB_CXXFLAGS_MAINT_APPEND += -mfp32
+endif
+
+# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81426
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU),sh3 sh4))
+	export DEB_CXXFLAGS_MAINT_STRIP += -O2
+	export DEB_CXXFLAGS_MAINT_APPEND += -O1
+endif
+
+# Disable gold linker on all architectures except x32
+ifneq ($(DEB_HOST_ARCH),x32)
+	EXTRA_CMAKE_ARGUMENTS += -DUSE_LD_GOLD=OFF
+endif
+
+# JIT is only supported on x86 / armhf / aarch64 / mips32
+ifeq (,$(filter $(DEB_HOST_ARCH),amd64 arm64 armhf hurd-i386 i386 kfreebsd-amd64 kfreebsd-i386 mips mipsel))
+	EXTRA_CMAKE_ARGUMENTS += -DENABLE_JIT=OFF
+endif
+
+# Copied from Fedora; see also https://github.com/annulen/webkit/issues/480
+ifneq (,$(filter $(DEB_HOST_ARCH_CPU),ppc64el s390x))
+	EXTRA_CMAKE_ARGUMENTS += -DUSE_SYSTEM_MALLOC=ON
+endif
 
 %:
-	dh $@ --parallel --dbg-package=libqt5webkit5-dbg --with pkgkde_symbolshelper
+	dh $@ --buildsystem=cmake --with pkgkde_symbolshelper
 
 override_dh_auto_configure:
-	# Run qmake once to create .qmake.conf and be sure to append the following values.
-	qmake
+	dh_auto_configure -- -G Ninja -DPORT=Qt $(EXTRA_CMAKE_ARGUMENTS)
 
-# Enable gstabs debugging symbols only on gstab_architectures.
-ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(gstab_architectures)))
-	echo "QMAKE_CXXFLAGS -= -g" >> .qmake.conf
-	echo "QMAKE_CXXFLAGS += -gstabs" >> .qmake.conf
-# Enable normal debugging symbols only on fulldebug_architectures.
-else ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(fulldebug_architectures)))
-	echo "QMAKE_CXXFLAGS += -g" >> .qmake.conf
-else
-# Disable debugging symbols in all the other archs.
-	echo "QMAKE_CXXFLAGS -= -g" >> .qmake.conf
-	echo "QMAKE_CXXFLAGS -= -gstabs" >> .qmake.conf
-endif
-
-# Disable JIT on selected architectures
-ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(disabled_jit_architectures)))
-	echo "QMAKE_CXXFLAGS += -DENABLE_JIT=0" >> .qmake.conf
-endif
-
-# Disable header precompliation as it creates invalid includes on certain
-# architectures causing build failure. LP: 1395661
-ifeq ($(DEB_HOST_ARCH),$(findstring $(DEB_HOST_ARCH), $(disabled_pch_architectures)))
-	echo "CONFIG -= precompile_header" >> .qmake.conf
-endif
-
-	# This warning makes the build logs 500 MB large
-	echo "QMAKE_CXXFLAGS += -Wno-expansion-to-defined" >> .qmake.conf
-
-	# Run qmake again now with the proper values.
-	qmake
+override_dh_auto_build-arch:
+	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja
 
 override_dh_auto_build-indep:
-	dh_auto_build -- sub-Source-QtWebKit-pro-clean
-	dh_auto_build -- -CSource -fMakefile.api docs
+	BUILDDIR=$(CURDIR)/obj-$(DEB_HOST_GNU_TYPE) \
+	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja -- docs
 
 override_dh_auto_install-arch:
-	make install INSTALL_ROOT=$(CURDIR)/debian/tmp
-	
-	# Remove rpath from the offending binaries
-	chrpath -d $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/libexec/QtWebProcess
-	chrpath -d $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/libexec/QtWebPluginProcess
-	
-	# Fix wrong path in pkgconfig files
-	find $(CURDIR)/debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig -type f -name '*.pc' \
-	-exec sed -i -e 's/$(DEB_HOST_MULTIARCH)\/$(DEB_HOST_MULTIARCH)/$(DEB_HOST_MULTIARCH)/g' {} \;
-	
+	dh_auto_install --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja
+
 	# Remove private headers
 	rm -rf debian/tmp/usr/include/$(DEB_HOST_MULTIARCH)/qt5/QtWebKit/*/QtWebKit
 	rm -rf debian/tmp/usr/include/$(DEB_HOST_MULTIARCH)/qt5/QtWebKitWidgets/*/QtWebKitWidgets
-	# And associated files
-	rm -fv debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/mkspecs/modules/qt_lib_webkit_private.pri
-	rm -fv debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/qt5/mkspecs/modules/qt_lib_webkitwidgets_private.pri
-	
-	# Remove libtool-like files
-	rm -f debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/*.la
 
 override_dh_auto_install-indep:
-	dh_auto_build -- -CSource -fMakefile.api INSTALL_ROOT=$(CURDIR)/debian/tmp install_docs
+	install -d debian/tmp/usr/share/qt5/
+	cp -r obj-$(DEB_HOST_GNU_TYPE)/doc debian/tmp/usr/share/qt5/
 
-override_dh_install:
-	dh_install --fail-missing
+override_dh_missing:
+	dh_missing --fail-missing
 
-override_dh_auto_test:
+override_dh_auto_test-arch:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	-cd obj-$(DEB_HOST_GNU_TYPE); \
+	xvfb-run -a -s "-screen 0 1024x768x24 +extension RANDR +extension RENDER +extension GLX" \
+	ctest --output-on-failure
+endif
+
+override_dh_auto_test-indep:
 	# Do not attempt to run anything to make build-indep work
+
+override_dh_strip:
+	dh_strip --dbgsym-migration='libqt5webkit5-dbg (<< 5.212.0~alpha2-1~)'
