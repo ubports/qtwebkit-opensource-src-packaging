@@ -42,7 +42,6 @@ Build-Depends: bison,
                xauth <!nocheck>,
                xvfb <!nocheck>
 Build-Depends-Indep: libqt5sql5-sqlite (>= 5.9.0+dfsg~),
-                     qtbase5-doc-html (>= 5.9.0+dfsg~),
                      qttools5-dev-tools (>= 5.9.0~)
 Standards-Version: 4.1.3
 Section: libs
