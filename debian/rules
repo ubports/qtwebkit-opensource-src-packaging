@@ -45,17 +45,17 @@ endif
 	dh $@ --buildsystem=cmake --parallel --with pkgkde_symbolshelper
 
 override_dh_auto_configure:
-	dh_auto_configure -- -G Ninja -DPORT=Qt $(EXTRA_CMAKE_ARGUMENTS)
+	dh_auto_configure -- -DPORT=Qt $(EXTRA_CMAKE_ARGUMENTS)
 
 override_dh_auto_build-arch:
-	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja
+	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE)
 
 override_dh_auto_build-indep:
 	BUILDDIR=$(CURDIR)/obj-$(DEB_HOST_GNU_TYPE) \
-	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja -- docs
+	dh_auto_build --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -- docs
 
 override_dh_auto_install-arch:
-	dh_auto_install --builddirectory=obj-$(DEB_HOST_GNU_TYPE) -O--buildsystem=ninja
+	dh_auto_install --builddirectory=obj-$(DEB_HOST_GNU_TYPE)
 
 	# Remove private headers
 	rm -rf debian/tmp/usr/include/$(DEB_HOST_MULTIARCH)/qt5/QtWebKit/*/QtWebKit
